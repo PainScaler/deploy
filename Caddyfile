@@ -1,0 +1,15 @@
+{
+    local_certs
+}
+
+painscaler.lan {
+    forward_auth authelia:9091 {
+        uri /api/verify?rd=https://auth.lan/
+        copy_headers Remote-User Remote-Email Remote-Groups Remote-Name
+    }
+    reverse_proxy painscaler-web:80
+}
+
+auth.lan {
+    reverse_proxy authelia:9091
+}

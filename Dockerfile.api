@@ -1,0 +1,19 @@
+FROM golang:1.25-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" \
+    -o /out/painscaler ./cmd/painscaler
+
+FROM alpine:3.20 AS prep
+RUN mkdir -p /data && chown 65532:65532 /data
+
+FROM gcr.io/distroless/static:nonroot
+COPY --from=prep --chown=65532:65532 /data /data
+COPY --from=build /out/painscaler /painscaler
+ENV XDG_CONFIG_HOME=/data
+VOLUME /data
+USER nonroot:nonroot
+EXPOSE 8080
+ENTRYPOINT ["/painscaler"]

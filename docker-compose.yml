@@ -1,0 +1,65 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - painscaler-web
+      - authelia
+    networks: [painscaler]
+
+  painscaler-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: painscaler-api:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8
+      - LOG_DIR=/data/logs
+      - LOG_LEVEL=info
+      - LOG_MAX_SIZE_MB=50
+      - LOG_MAX_BACKUPS=10
+      - LOG_MAX_AGE_DAYS=30
+      - LOG_COMPRESS=true
+    volumes:
+      - painscaler_data:/data
+    expose: ["8080"]
+    networks: [painscaler]
+
+  painscaler-web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    image: painscaler-web:local
+    restart: unless-stopped
+    expose: ["80"]
+    depends_on:
+      - painscaler-api
+    networks: [painscaler]
+
+  authelia:
+    image: authelia/authelia:4.39
+    restart: unless-stopped
+    volumes:
+      - ./authelia:/config
+    expose: ["9091"]
+    environment:
+      - TZ=UTC
+    networks: [painscaler]
+
+volumes:
+  caddy_data:
+  caddy_config:
+  painscaler_data:
+
+networks:
+  painscaler:
+    driver: bridge
