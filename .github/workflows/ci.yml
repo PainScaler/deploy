@@ -25,7 +25,9 @@ jobs:
           dockerfile: Dockerfile.web
 
       - name: docker compose config
-        run: docker compose config -q
+        run: |
+          touch .env
+          docker compose config -q
 
       - name: caddy validate
         run: |
